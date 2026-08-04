@@ -35,5 +35,4 @@ def create_refresh_token(user_id: int) -> tuple[str, str]:
 
 
 def decode_token(token: str) -> dict:
-    payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
-    return payload
+    return jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])

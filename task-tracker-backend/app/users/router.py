@@ -1,23 +1,19 @@
-from datetime import timedelta
-from typing import Annotated
+import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
-from redis.asyncio import Redis
-from sqlalchemy.ext.asyncio import AsyncSession
+import jwt
+from fastapi import APIRouter, HTTPException, Request, Response, status
 
-from app.config import settings
-from app.database import get_session
-from app.redis_client import get_redis_client
+from app.users.cookies import set_auth_cookies
+from app.users.dependencies import CurrentUserDep, RedisDep, SessionDep
 from app.users.exceptions import EmailAlreadyTakenError, InvalidCredentialsError
 from app.users.schemas import UserCreate, UserLogin, UserRead
-from app.users.security import create_access_token, create_refresh_token
+from app.users.security import create_access_token, create_refresh_token, decode_token
 from app.users.service import authenticate_user, create_user
-from app.users.token_storage import save_refresh_token
+from app.users.token_storage import get_refresh_token_owner, rotate_refresh_token, \
+    save_refresh_token
 
 router = APIRouter(tags=["users"])
-
-SessionDep = Annotated[AsyncSession, Depends(get_session)]
-RedisDep = Annotated[Redis, Depends(get_redis_client)]
+logger = logging.getLogger(__name__)
 
 
 @router.post("/user", response_model=UserRead)
@@ -31,8 +27,8 @@ async def register(data: UserCreate, session: SessionDep):
 
 
 @router.get("/user", response_model=UserRead)
-async def get_current_user():
-    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+async def read_current_user(user: CurrentUserDep):
+    return user
 
 
 @router.post("/session")
@@ -47,19 +43,47 @@ async def create_session(data: UserLogin, session: SessionDep, redis_client: Red
 
     await save_refresh_token(redis_client, jti, user.id)
 
-    response.set_cookie(key="access_token",
-                        value=access_token,
-                        max_age=int(timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES).total_seconds()),
-                        httponly=True,
-                        secure=settings.COOKIE_SECURE,
-                        samesite="lax",
-                        path="/")
-    response.set_cookie(key="refresh_token",
-                        value=refresh_token,
-                        max_age=int(timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS).total_seconds()),
-                        httponly=True,
-                        secure=settings.COOKIE_SECURE,
-                        samesite="lax",
-                        path="/session")
+    set_auth_cookies(response, access_token, refresh_token)
 
     return {"message": "Login successful"}
+
+
+@router.put("/session")
+async def refresh_session(request: Request, redis_client: RedisDep, response: Response):
+    cookie = request.cookies.get("refresh_token")
+
+    if cookie is None:
+        logger.warning("Session refresh failed, refresh token cookie is missing")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
+    try:
+        payload = decode_token(cookie)
+    except jwt.InvalidTokenError:
+        logger.warning("Session refresh failed, invalid or expired refresh token")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED) from None
+
+    if payload.get("type") != "refresh":
+        logger.warning("Session refresh failed, wrong token type: type=%s", payload.get("type"))
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
+    jti = payload.get("jti")
+
+    if jti is None:
+        logger.warning("Session refresh failed, token has no jti")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
+    user_id = await get_refresh_token_owner(redis_client, jti)
+
+    if user_id is None:
+        logger.warning("Session refresh failed, refresh token not found in storage")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
+    user_id = int(user_id)
+    access_token = create_access_token(user_id)
+    refresh_token, new_jti = create_refresh_token(user_id)
+
+    await rotate_refresh_token(redis_client, jti, new_jti, user_id)
+
+    set_auth_cookies(response, access_token, refresh_token)
+
+    return {"message": "Session refreshed"}
