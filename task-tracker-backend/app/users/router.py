@@ -3,13 +3,13 @@ import logging
 import jwt
 from fastapi import APIRouter, HTTPException, Request, Response, status
 
-from app.users.cookies import set_auth_cookies
+from app.users.cookies import delete_auth_cookies, set_auth_cookies
 from app.users.dependencies import CurrentUserDep, RedisDep, SessionDep
 from app.users.exceptions import EmailAlreadyTakenError, InvalidCredentialsError
 from app.users.schemas import UserCreate, UserLogin, UserRead
 from app.users.security import create_access_token, create_refresh_token, decode_token
 from app.users.service import authenticate_user, create_user
-from app.users.token_storage import get_refresh_token_owner, rotate_refresh_token, \
+from app.users.token_storage import delete_refresh_token, get_refresh_token_owner, rotate_refresh_token, \
     save_refresh_token
 
 router = APIRouter(tags=["users"])
@@ -44,20 +44,19 @@ async def create_session(data: UserLogin, session: SessionDep, redis_client: Red
     await save_refresh_token(redis_client, jti, user.id)
 
     set_auth_cookies(response, access_token, refresh_token)
-
     return {"message": "Login successful"}
 
 
 @router.put("/session")
 async def refresh_session(request: Request, redis_client: RedisDep, response: Response):
-    cookie = request.cookies.get("refresh_token")
+    refresh_token = request.cookies.get("refresh_token")
 
-    if cookie is None:
+    if refresh_token is None:
         logger.warning("Session refresh failed, refresh token cookie is missing")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     try:
-        payload = decode_token(cookie)
+        payload = decode_token(refresh_token)
     except jwt.InvalidTokenError:
         logger.warning("Session refresh failed, invalid or expired refresh token")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED) from None
@@ -80,10 +79,39 @@ async def refresh_session(request: Request, redis_client: RedisDep, response: Re
 
     user_id = int(user_id)
     access_token = create_access_token(user_id)
-    refresh_token, new_jti = create_refresh_token(user_id)
+    new_refresh_token, new_jti = create_refresh_token(user_id)
 
     await rotate_refresh_token(redis_client, jti, new_jti, user_id)
 
-    set_auth_cookies(response, access_token, refresh_token)
-
+    set_auth_cookies(response, access_token, new_refresh_token)
     return {"message": "Session refreshed"}
+
+
+@router.delete("/session")
+async def delete_session(request: Request, redis_client: RedisDep, response: Response):
+    refresh_token = request.cookies.get("refresh_token")
+
+    if refresh_token is None:
+        logger.warning("Session delete failed, refresh token cookie is missing")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
+    try:
+        payload = decode_token(refresh_token)
+    except jwt.InvalidTokenError:
+        logger.warning("Session delete failed, invalid or expired refresh token")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED) from None
+
+    if payload.get("type") != "refresh":
+        logger.warning("Session delete failed, wrong token type: type=%s", payload.get("type"))
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
+    jti = payload.get("jti")
+
+    if jti is None:
+        logger.warning("Session delete failed, token has no jti")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
+    await delete_refresh_token(redis_client, jti)
+
+    delete_auth_cookies(response)
+    return {"message": "Session deleted"}

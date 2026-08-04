@@ -18,14 +18,14 @@ logger = logging.getLogger(__name__)
 
 
 async def get_current_user(request: Request, session: SessionDep) -> User:
-    cookie = request.cookies.get("access_token")
+    access_token = request.cookies.get("access_token")
 
-    if cookie is None:
+    if access_token is None:
         logger.warning("Authentication failed, access token cookie is missing")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     try:
-        payload = decode_token(cookie)
+        payload = decode_token(access_token)
     except jwt.InvalidTokenError:
         logger.warning("Authentication failed, invalid or expired access token")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED) from None

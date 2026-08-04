@@ -20,3 +20,16 @@ def set_auth_cookies(response: Response, access_token: str, refresh_token: str) 
                         secure=settings.COOKIE_SECURE,
                         samesite="lax",
                         path="/session")
+
+
+def delete_auth_cookies(response: Response) -> None:
+    response.delete_cookie(key="access_token",
+                           httponly=True,
+                           secure=settings.COOKIE_SECURE,
+                           samesite="lax",
+                           path="/")
+    response.delete_cookie(key="refresh_token",
+                           httponly=True,
+                           secure=settings.COOKIE_SECURE,
+                           samesite="lax",
+                           path="/session")
