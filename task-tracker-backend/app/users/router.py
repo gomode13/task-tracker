@@ -17,11 +17,17 @@ logger = logging.getLogger(__name__)
 
 
 @router.post("/user", response_model=UserRead)
-async def register(data: UserCreate, session: SessionDep):
+async def register(data: UserCreate, session: SessionDep, redis_client: RedisDep, response: Response):
     try:
         user = await create_user(session, data)
     except EmailAlreadyTakenError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=exc.message) from None
+
+    access_token = create_access_token(user.id)
+    refresh_token, jti = create_refresh_token(user.id)
+    await save_refresh_token(redis_client, jti, user.id)
+
+    set_auth_cookies(response, access_token, refresh_token)
 
     return user
 
@@ -40,7 +46,6 @@ async def create_session(data: UserLogin, session: SessionDep, redis_client: Red
 
     access_token = create_access_token(user.id)
     refresh_token, jti = create_refresh_token(user.id)
-
     await save_refresh_token(redis_client, jti, user.id)
 
     set_auth_cookies(response, access_token, refresh_token)
@@ -80,7 +85,6 @@ async def refresh_session(request: Request, redis_client: RedisDep, response: Re
     user_id = int(user_id)
     access_token = create_access_token(user_id)
     new_refresh_token, new_jti = create_refresh_token(user_id)
-
     await rotate_refresh_token(redis_client, jti, new_jti, user_id)
 
     set_auth_cookies(response, access_token, new_refresh_token)
@@ -112,6 +116,5 @@ async def delete_session(request: Request, redis_client: RedisDep, response: Res
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
     await delete_refresh_token(redis_client, jti)
-
     delete_auth_cookies(response)
     return {"message": "Session deleted"}
