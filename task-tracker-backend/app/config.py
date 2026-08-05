@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     REFRESH_TOKEN_EXPIRE_DAYS: int
     COOKIE_SECURE: bool
+    CORS_ALLOW_ORIGINS: list[str]
 
     @property
     def database_url(self) -> str:
