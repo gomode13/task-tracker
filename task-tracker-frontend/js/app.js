@@ -20,8 +20,10 @@ $(function () {
 });
 
 function loadCurrentUser() {
-    $.ajax({
-        url: API_BASE_URL + '/user', method: 'GET', xhrFields: {
+    apiRequest({
+        url: API_BASE_URL + '/user',
+        method: 'GET',
+        xhrFields: {
             withCredentials: true
         }
     })
@@ -140,4 +142,20 @@ function logout() {
         .always(function () {
             showGuestState();
         });
+}
+
+function apiRequest(options) {
+    return $.ajax(options).catch(function (jqXHR) {
+        if (jqXHR.status !== 401) {
+            return $.Deferred().reject(jqXHR);
+        }
+
+        return $.ajax({
+            url: API_BASE_URL + '/session',
+            method: 'PUT',
+            xhrFields: {withCredentials: true}
+        }).then(function () {
+            return $.ajax(options);
+        });
+    });
 }
