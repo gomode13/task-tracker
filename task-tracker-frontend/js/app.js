@@ -4,10 +4,14 @@ $(function () {
     loadCurrentUser();
 
     $('#registerForm').on('submit', function (event) {
-    event.preventDefault();
-    register();
-});
+        event.preventDefault();
+        register();
+    });
 
+    $('#loginForm').on('submit', function (event) {
+        event.preventDefault();
+        login();
+    });
 });
 
 function loadCurrentUser() {
@@ -82,6 +86,41 @@ function hideFormError(selector) {
 function getRegisterErrorMessage(status) {
     if (status === 409) {
         return 'Пользователь с таким email уже зарегистрирован';
+    }
+    if (status === 422) {
+        return 'Проверьте правильность заполнения полей';
+    }
+    return 'Что-то пошло не так, попробуйте позже';
+}
+
+function login() {
+    const email = $('#loginEmailInput').val();
+    const password = $('#loginPasswordInput').val();
+
+    hideFormError('#loginError');
+
+    $.ajax({
+        url: API_BASE_URL + '/session',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({email: email, password: password}),
+        xhrFields: {
+            withCredentials: true
+        }
+    })
+        .done(function () {
+            $('#loginForm')[0].reset();
+            bootstrap.Modal.getInstance($('#loginModal')[0]).hide();
+            loadCurrentUser();
+        })
+        .fail(function (jqXHR) {
+            showFormError('#loginError', getLoginErrorMessage(jqXHR.status));
+        });
+}
+
+function getLoginErrorMessage(status) {
+    if (status === 401) {
+        return 'Неверный email или пароль';
     }
     if (status === 422) {
         return 'Проверьте правильность заполнения полей';
