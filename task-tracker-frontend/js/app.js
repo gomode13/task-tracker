@@ -12,13 +12,16 @@ $(function () {
         event.preventDefault();
         login();
     });
+
+    $('#logoutButton').on('click', function () {
+        logout();
+    });
+
 });
 
 function loadCurrentUser() {
     $.ajax({
-        url: API_BASE_URL + '/user',
-        method: 'GET',
-        xhrFields: {
+        url: API_BASE_URL + '/user', method: 'GET', xhrFields: {
             withCredentials: true
         }
     })
@@ -126,4 +129,15 @@ function getLoginErrorMessage(status) {
         return 'Проверьте правильность заполнения полей';
     }
     return 'Что-то пошло не так, попробуйте позже';
+}
+
+function logout() {
+    $.ajax({
+        url: API_BASE_URL + '/session', method: 'DELETE', xhrFields: {
+            withCredentials: true
+        }
+    })
+        .always(function () {
+            showGuestState();
+        });
 }
