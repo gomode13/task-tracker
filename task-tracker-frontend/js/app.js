@@ -2,6 +2,12 @@ const API_BASE_URL = 'http://localhost:8080';
 
 $(function () {
     loadCurrentUser();
+
+    $('#registerForm').on('submit', function (event) {
+    event.preventDefault();
+    register();
+});
+
 });
 
 function loadCurrentUser() {
@@ -32,4 +38,53 @@ function showGuestState() {
     $('#userArea').addClass('d-none');
     $('#guestArea').removeClass('d-none');
     $('#mainContent').addClass('d-none');
+}
+
+function register() {
+    const email = $('#registerEmailInput').val();
+    const password = $('#registerPasswordInput').val();
+    const passwordRepeat = $('#registerPasswordRepeatInput').val();
+
+    if (password !== passwordRepeat) {
+        showFormError('#registerError', 'Пароли не совпадают');
+        return;
+    }
+
+    hideFormError('#registerError');
+
+    $.ajax({
+        url: API_BASE_URL + '/user',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({email: email, password: password, password_repeat: passwordRepeat}),
+        xhrFields: {
+            withCredentials: true
+        }
+    })
+        .done(function (user) {
+            $('#registerForm')[0].reset();
+            bootstrap.Modal.getInstance($('#registerModal')[0]).hide();
+            showAuthorizedState(user);
+        })
+        .fail(function (jqXHR) {
+            showFormError('#registerError', getRegisterErrorMessage(jqXHR.status));
+        });
+}
+
+function showFormError(selector, message) {
+    $(selector).text(message).removeClass('d-none');
+}
+
+function hideFormError(selector) {
+    $(selector).text('').addClass('d-none');
+}
+
+function getRegisterErrorMessage(status) {
+    if (status === 409) {
+        return 'Пользователь с таким email уже зарегистрирован';
+    }
+    if (status === 422) {
+        return 'Проверьте правильность заполнения полей';
+    }
+    return 'Что-то пошло не так, попробуйте позже';
 }
