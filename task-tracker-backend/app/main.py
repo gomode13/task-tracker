@@ -6,6 +6,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import settings
 from app.logging_config import setup_logging
+from app.tasks.router import router as tasks_router
 from app.users.router import router as users_router
 
 setup_logging()
@@ -16,6 +17,7 @@ app.add_middleware(CORSMiddleware, allow_origins=settings.CORS_ALLOW_ORIGINS, al
                    allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE"], allow_headers=["Content-Type"])
 
 app.include_router(users_router)
+app.include_router(tasks_router)
 
 
 @app.exception_handler(StarletteHTTPException)
