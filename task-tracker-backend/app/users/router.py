@@ -3,8 +3,9 @@ import logging
 import jwt
 from fastapi import APIRouter, HTTPException, Request, Response, status
 
+from app.dependencies import RedisDep, SessionDep
 from app.users.cookies import delete_auth_cookies, set_auth_cookies
-from app.users.dependencies import CurrentUserDep, RedisDep, SessionDep
+from app.users.dependencies import CurrentUserDep
 from app.users.exceptions import EmailAlreadyTakenError, InvalidCredentialsError
 from app.users.schemas import UserCreate, UserLogin, UserRead
 from app.users.security import create_access_token, create_refresh_token, decode_token

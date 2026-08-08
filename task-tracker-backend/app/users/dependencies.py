@@ -3,17 +3,12 @@ from typing import Annotated
 
 import jwt
 from fastapi import Depends, HTTPException, Request, status
-from redis.asyncio import Redis
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_session
-from app.redis_client import get_redis_client
+from app.dependencies import SessionDep
 from app.users.models import User
 from app.users.security import decode_token
 from app.users.service import get_user_by_id
 
-SessionDep = Annotated[AsyncSession, Depends(get_session)]
-RedisDep = Annotated[Redis, Depends(get_redis_client)]
 logger = logging.getLogger(__name__)
 
 
