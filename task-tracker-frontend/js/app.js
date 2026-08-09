@@ -1,6 +1,9 @@
 const API_BASE_URL = 'http://localhost:8080';
+let isDeletingTask = false;
+
 
 $(function () {
+    const $taskLists = $('#activeTasksList, #doneTasksList');
     loadCurrentUser();
 
     $('#registerForm').on('submit', function (event) {
@@ -15,6 +18,40 @@ $(function () {
 
     $('#logoutButton').on('click', function () {
         logout();
+    });
+
+    $('#addTaskButton').on('click', function () {
+        addTask();
+    });
+
+    $('#newTaskTitleInput').on('keydown', function (event) {
+        if (event.key === 'Enter') {
+            addTask();
+        }
+    });
+
+    $taskLists.on('change', '.form-check-input', function () {
+        const task = $(this).closest('li').data('task');
+        toggleTask(task.id, $(this).prop('checked'));
+    });
+
+    $taskLists.on('click', '.task-title', function () {
+        const task = $(this).closest('li').data('task');
+        openTaskModal(task);
+    });
+
+    $('#taskModal').on('hidden.bs.modal', function () {
+        if (isDeletingTask) {
+            isDeletingTask = false;
+            return;
+        }
+        saveTaskFromModal();
+    });
+
+    $('#deleteTaskButton').on('click', function () {
+        isDeletingTask = true;
+        deleteTask($('#taskIdInput').val());
+        bootstrap.Modal.getOrCreateInstance($('#taskModal')[0]).hide();
     });
 
 });
@@ -40,6 +77,7 @@ function showAuthorizedState(user) {
     $('#guestArea').addClass('d-none');
     $('#userArea').removeClass('d-none');
     $('#mainContent').removeClass('d-none');
+    loadTasks();
 }
 
 function showGuestState() {
@@ -47,6 +85,8 @@ function showGuestState() {
     $('#userArea').addClass('d-none');
     $('#guestArea').removeClass('d-none');
     $('#mainContent').addClass('d-none');
+    $('#activeTasksList').empty();
+    $('#doneTasksList').empty();
 }
 
 function register() {
@@ -158,4 +198,153 @@ function apiRequest(options) {
             return $.ajax(options);
         });
     });
+}
+
+function loadTasks() {
+    apiRequest({
+        url: API_BASE_URL + '/tasks',
+        method: 'GET',
+        xhrFields: {
+            withCredentials: true
+        }
+    })
+        .done(function (tasks) {
+            renderTasks(tasks);
+        })
+        .fail(function () {
+            showGuestState();
+        });
+}
+
+function renderTasks(tasks) {
+    $('#activeTasksList').empty();
+    $('#doneTasksList').empty();
+
+    tasks.forEach(function (task) {
+        const item = buildTaskItem(task);
+
+        if (task.is_done) {
+            $('#doneTasksList').append(item);
+        } else {
+            $('#activeTasksList').append(item);
+        }
+    });
+}
+
+function buildTaskItem(task) {
+    const item = $('<li class="list-group-item d-flex align-items-center gap-3"></li>');
+    item.data('task', task);
+
+    const checkbox = $('<input class="form-check-input mt-0" type="checkbox">');
+    checkbox.prop('checked', task.is_done);
+
+    const titleButton = $('<button type="button" class="btn btn-link p-0 text-decoration-none flex-grow-1 text-start task-title"></button>');
+    titleButton.addClass(task.is_done ? 'text-body-secondary' : 'text-body');
+    titleButton.text(task.title);
+
+    item.append(checkbox);
+    item.append(titleButton);
+
+    return item;
+}
+
+function addTask() {
+    const title = $('#newTaskTitleInput').val().trim();
+
+    if (title === '') {
+        return;
+    }
+
+    hideFormError('#taskError');
+
+    apiRequest({
+        url: API_BASE_URL + '/tasks',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({title: title}),
+        xhrFields: {
+            withCredentials: true
+        }
+    })
+        .done(function () {
+            $('#newTaskTitleInput').val('');
+            loadTasks();
+        })
+        .fail(function () {
+            showFormError('#taskError', 'Не удалось добавить задачу, попробуйте ещё раз');
+        });
+}
+
+function toggleTask(taskId, isDone) {
+    apiRequest({
+        url: API_BASE_URL + '/tasks/' + taskId,
+        method: 'PATCH',
+        contentType: 'application/json',
+        data: JSON.stringify({is_done: isDone}),
+        xhrFields: {
+            withCredentials: true
+        }
+    })
+        .done(function () {
+            loadTasks();
+        })
+        .fail(function () {
+            loadTasks();
+        });
+}
+
+function openTaskModal(task) {
+    $('#taskIdInput').val(task.id);
+    $('#taskTitleInput').val(task.title);
+    $('#taskDescriptionInput').val(task.description || '');
+    $('#taskDoneCheckbox').prop('checked', task.is_done);
+
+    bootstrap.Modal.getOrCreateInstance($('#taskModal')[0]).show();
+}
+
+function saveTaskFromModal() {
+    const taskId = $('#taskIdInput').val();
+    const title = $('#taskTitleInput').val().trim();
+    const description = $('#taskDescriptionInput').val().trim();
+
+    if (title === '') {
+        loadTasks();
+        return;
+    }
+
+    apiRequest({
+        url: API_BASE_URL + '/tasks/' + taskId,
+        method: 'PATCH',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            title: title,
+            description: description === '' ? null : description,
+            is_done: $('#taskDoneCheckbox').prop('checked')
+        }),
+        xhrFields: {
+            withCredentials: true
+        }
+    })
+        .done(function () {
+            loadTasks();
+        })
+        .fail(function () {
+            loadTasks();
+        });
+}
+
+function deleteTask(taskId) {
+    apiRequest({
+        url: API_BASE_URL + '/tasks/' + taskId,
+        method: 'DELETE',
+        xhrFields: {
+            withCredentials: true
+        }
+    })
+        .done(function () {
+            loadTasks();
+        })
+        .fail(function () {
+            loadTasks();
+        });
 }
