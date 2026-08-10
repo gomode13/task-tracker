@@ -4,6 +4,7 @@ import jwt
 from fastapi import APIRouter, HTTPException, Request, Response, status
 
 from app.dependencies import RedisDep, SessionDep
+from app.email_sender.tasks import send_welcome_email
 from app.users.cookies import delete_auth_cookies, set_auth_cookies
 from app.users.dependencies import CurrentUserDep
 from app.users.exceptions import EmailAlreadyTakenError, InvalidCredentialsError
@@ -23,6 +24,8 @@ async def register(data: UserCreate, session: SessionDep, redis_client: RedisDep
         user = await create_user(session, data)
     except EmailAlreadyTakenError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=exc.message) from None
+
+    send_welcome_email.delay(user.email)
 
     access_token = create_access_token(user.id)
     refresh_token, jti = create_refresh_token(user.id)
