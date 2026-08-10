@@ -18,7 +18,7 @@ services:
       start_period: 10s
 
   rabbitmq:
-    image: rabbitmq:4-management
+    image: rabbitmq:4.2-management
     restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
