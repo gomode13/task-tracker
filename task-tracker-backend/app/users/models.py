@@ -18,5 +18,6 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    tasks: Mapped[list["Task"]] = relationship(back_populates="user", cascade="all, delete-orphan",
-                                               passive_deletes=True)
+    tasks: Mapped[list["Task"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", passive_deletes=True
+    )

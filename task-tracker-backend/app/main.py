@@ -13,8 +13,13 @@ setup_logging()
 
 app = FastAPI(title="Task Tracker")
 
-app.add_middleware(CORSMiddleware, allow_origins=settings.CORS_ALLOW_ORIGINS, allow_credentials=True,
-                   allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE"], allow_headers=["Content-Type"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ALLOW_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE"],
+    allow_headers=["Content-Type"],
+)
 
 app.include_router(users_router)
 app.include_router(tasks_router)
