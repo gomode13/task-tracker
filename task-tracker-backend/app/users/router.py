@@ -11,8 +11,12 @@ from app.users.exceptions import EmailAlreadyTakenError, InvalidCredentialsError
 from app.users.schemas import UserCreate, UserLogin, UserRead
 from app.users.security import create_access_token, create_refresh_token, decode_token
 from app.users.service import authenticate_user, create_user
-from app.users.token_storage import delete_refresh_token, get_refresh_token_owner, rotate_refresh_token, \
-    save_refresh_token
+from app.users.token_storage import (
+    delete_refresh_token,
+    get_refresh_token_owner,
+    rotate_refresh_token,
+    save_refresh_token,
+)
 
 router = APIRouter(tags=["users"])
 logger = logging.getLogger(__name__)

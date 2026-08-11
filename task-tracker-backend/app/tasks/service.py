@@ -1,7 +1,8 @@
 import logging
+from collections.abc import Sequence
 from datetime import UTC, datetime
 
-from sqlalchemy import Sequence, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.tasks.exceptions import TaskNotFoundError
