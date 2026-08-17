@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     RABBITMQ_HOST: str
     RABBITMQ_PORT: int
 
+    KAFKA_HOST: str
+    KAFKA_PORT: int
+
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
@@ -50,6 +53,10 @@ class Settings(BaseSettings):
     @property
     def rabbitmq_url(self) -> str:
         return f"amqp://{self.RABBITMQ_DEFAULT_USER}:{self.RABBITMQ_DEFAULT_PASS}@{self.RABBITMQ_HOST}:{self.RABBITMQ_PORT}//"
+
+    @property
+    def kafka_bootstrap_servers(self) -> str:
+        return f"{self.KAFKA_HOST}:{self.KAFKA_PORT}"
 
 
 settings = Settings()
