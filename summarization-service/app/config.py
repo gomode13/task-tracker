@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     KAFKA_HOST: str
     KAFKA_PORT: int
 
+    GIGACHAT_AUTH_KEY: str
+
     @property
     def kafka_bootstrap_servers(self) -> str:
         return f"{self.KAFKA_HOST}:{self.KAFKA_PORT}"
