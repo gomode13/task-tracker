@@ -1,7 +1,10 @@
 import logging
 
 from aiokafka import AIOKafkaConsumer
+
 from app.config import settings
+from app.schemas import DailyReportRequest
+from app.service import handle_daily_report_request
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +16,11 @@ async def consume_daily_report_requests() -> None:
     await consumer.start()
     try:
         async for msg in consumer:
-            logger.info("Received message: offset=%s, value=%s", msg.offset, msg.value)
+            try:
+                request = DailyReportRequest.model_validate_json(msg.value.decode("utf-8"))
+                logger.info("Received daily report request: offset=%s, request_id=%s", msg.offset, request.request_id)
+                await handle_daily_report_request(request)
+            except Exception:
+                logger.exception("Error while handling daily report request")
     finally:
         await consumer.stop()
