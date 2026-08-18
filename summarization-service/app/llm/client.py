@@ -14,7 +14,7 @@ class GigaChatClient:
         self.expires_at: int | None = None
 
     async def _fetch_access_token(self) -> None:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(verify=settings.SSL_CERT_FILE) as client:
             response = await client.post(
                 url="https://ngw.devices.sberbank.ru:9443/api/v2/oauth",
                 headers={
@@ -37,7 +37,7 @@ class GigaChatClient:
     async def generate_summary(self, report_date: date, completed_titles: list[str], pending_titles: list[str]) -> str:
         await self._ensure_access_token()
         user_message = f"Дата: {report_date}\nВыполненные задачи:\n{"\n".join(completed_titles)}\nНевыполненные задачи:\n{"\n".join(pending_titles)}"
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(verify=settings.SSL_CERT_FILE) as client:
             response = await client.post(
                 url="https://api.giga.chat/v1/chat/completions",
                 headers={
