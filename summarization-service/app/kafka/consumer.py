@@ -3,6 +3,7 @@ import logging
 from aiokafka import AIOKafkaConsumer
 
 from app.config import settings
+from app.kafka.producer import kafka_producer
 from app.schemas import DailyReportRequest
 from app.service import handle_daily_report_request
 
@@ -15,6 +16,7 @@ async def consume_daily_report_requests() -> None:
     )
     await consumer.start()
     try:
+        await kafka_producer.start()
         async for msg in consumer:
             try:
                 request = DailyReportRequest.model_validate_json(msg.value.decode("utf-8"))
@@ -24,3 +26,4 @@ async def consume_daily_report_requests() -> None:
                 logger.exception("Error while handling daily report request")
     finally:
         await consumer.stop()
+        await kafka_producer.stop()
