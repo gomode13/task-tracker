@@ -17,6 +17,7 @@ async def consume_daily_report_requests() -> None:
     await consumer.start()
     try:
         await kafka_producer.start()
+        logger.info("Summarization service started")
         async for msg in consumer:
             try:
                 request = DailyReportRequest.model_validate_json(msg.value.decode("utf-8"))
