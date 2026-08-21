@@ -17,6 +17,24 @@ services:
       retries: 5
       start_period: 10s
 
+  summarization-postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${SUMMARIZATION_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${SUMMARIZATION_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${SUMMARIZATION_POSTGRES_DB}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - summarization_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   rabbitmq:
     image: rabbitmq:4.2-management
     restart: unless-stopped
@@ -100,3 +118,4 @@ volumes:
   rabbitmq_data:
   redis_data:
   kafka_data:
+  summarization_pgdata:
