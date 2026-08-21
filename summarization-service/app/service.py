@@ -13,6 +13,6 @@ async def handle_daily_report_request(request: DailyReportRequest) -> None:
             request.report_date, request.completed_titles, request.pending_titles
         )
         response = DailyReportResponse(request_id=request.request_id, summary=summary)
-    except httpx.HTTPError as e:
+    except (httpx.HTTPError, KeyError, IndexError) as e:
         response = DailyReportResponse(request_id=request.request_id, error=str(e))
     await kafka_producer.send_daily_report_response(response)

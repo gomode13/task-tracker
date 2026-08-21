@@ -13,6 +13,13 @@ class GigaChatClient:
         self.access_token: str | None = None
         self.expires_at: int | None = None
 
+    def _is_token_valid(self) -> bool:
+        if self.access_token is None or self.expires_at is None:
+            return False
+        if self.expires_at / 1000 - 60 < time():
+            return False
+        return True
+
     async def _fetch_access_token(self) -> None:
         async with httpx.AsyncClient(verify=settings.GIGACHAT_CA_CERT_FILE) as client:
             response = await client.post(
@@ -31,7 +38,7 @@ class GigaChatClient:
             self.expires_at = token_data["expires_at"]
 
     async def _ensure_access_token(self) -> None:
-        if self.access_token is None or self.expires_at / 1000 - 60 < time():
+        if not self._is_token_valid():
             await self._fetch_access_token()
 
     async def generate_summary(self, report_date: date, completed_titles: list[str], pending_titles: list[str]) -> str:
