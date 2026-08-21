@@ -12,7 +12,7 @@ class Settings(BaseSettings):
 
     GIGACHAT_AUTH_KEY: str
 
-    SSL_CERT_FILE: str
+    GIGACHAT_CA_CERT_FILE: str
 
     @property
     def kafka_bootstrap_servers(self) -> str:
