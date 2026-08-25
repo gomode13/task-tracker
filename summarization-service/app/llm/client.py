@@ -1,4 +1,3 @@
-from datetime import date
 from uuid import uuid4
 
 import httpx
@@ -41,9 +40,11 @@ class GigaChatClient:
         if not self._is_token_valid():
             await self._fetch_access_token()
 
-    async def generate_summary(self, report_date: date, completed_titles: list[str], pending_titles: list[str]) -> str:
+    async def generate_summary(self, completed_titles: list[str], pending_titles: list[str]) -> str:
         await self._ensure_access_token()
-        user_message = f"Дата: {report_date}\nВыполненные задачи:\n{"\n".join(completed_titles)}\nНевыполненные задачи:\n{"\n".join(pending_titles)}"
+        user_message = (
+            f"Выполненные задачи:\n{"\n".join(completed_titles)}\nНевыполненные задачи:\n{"\n".join(pending_titles)}"
+        )
         async with httpx.AsyncClient(verify=settings.GIGACHAT_CA_CERT_FILE) as client:
             response = await client.post(
                 url="https://api.giga.chat/v1/chat/completions",
