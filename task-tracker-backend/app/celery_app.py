@@ -12,4 +12,13 @@ BEAT_SCHEDULE = {
         "schedule": crontab(minute=0, hour=0),
     },
 }
-celery_app.conf.update(task_serializer="json", timezone="Europe/Moscow", beat_schedule=BEAT_SCHEDULE)
+celery_app.conf.update(
+    task_serializer="json",
+    timezone="Europe/Moscow",
+    beat_schedule=BEAT_SCHEDULE,
+    task_routes={
+        "app.scheduler.tasks.send_daily_reports": {
+            "queue": "reports",
+        }
+    },
+)
