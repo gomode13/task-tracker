@@ -38,6 +38,8 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str
     EMAIL_FROM: str
 
+    DAILY_REPORT_RESPONSE_TIMEOUT_SECONDS: int
+
     @property
     def database_url(self) -> str:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
