@@ -23,7 +23,7 @@ def send_welcome_email(self, email: str) -> None:
 
 
 @celery_app.task(bind=True, max_retries=3, default_retry_delay=60)
-def send_daily_report_email(self, email: str, completed_titles: list[str], pending_titles: list[str]) -> None:
+def send_daily_report_email(self, email: str, completed_titles: list[str], pending_titles: list[str], summary: str | None) -> None:
     subject = "Отчёт по задачам за вчера"
     body = (
         "Здравствуйте!\n\n"
@@ -32,7 +32,7 @@ def send_daily_report_email(self, email: str, completed_titles: list[str], pendi
         "С уважением,\n"
         "Task Tracker"
     )
-    html = render_template("daily_report.html", completed_titles=completed_titles, pending_titles=pending_titles)
+    html = render_template("daily_report.html", completed_titles=completed_titles, pending_titles=pending_titles, summary=summary)
     try:
         send_email(email, subject, body, html)
     except (smtplib.SMTPException, OSError) as exc:
