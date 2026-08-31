@@ -1,5 +1,4 @@
 const API_BASE_URL = 'http://localhost:8080';
-let isDeletingTask = false;
 
 
 $(function () {
@@ -40,16 +39,15 @@ $(function () {
         openTaskModal(task);
     });
 
-    $('#taskModal').on('hidden.bs.modal', function () {
-        if (isDeletingTask) {
-            isDeletingTask = false;
-            return;
-        }
+    $('#taskTitleInput, #taskDescriptionInput').on('input', function () {
+        scheduleTaskSave();
+    });
+
+    $('#taskDoneCheckbox').on('change', function () {
         saveTaskFromModal();
     });
 
     $('#deleteTaskButton').on('click', function () {
-        isDeletingTask = true;
         deleteTask($('#taskIdInput').val());
         bootstrap.Modal.getOrCreateInstance($('#taskModal')[0]).hide();
     });
@@ -302,13 +300,21 @@ function openTaskModal(task) {
     bootstrap.Modal.getOrCreateInstance($('#taskModal')[0]).show();
 }
 
+let taskSaveTimer = null;
+
+function scheduleTaskSave() {
+    clearTimeout(taskSaveTimer);
+    taskSaveTimer = setTimeout(saveTaskFromModal, 500);
+}
+
 function saveTaskFromModal() {
+    clearTimeout(taskSaveTimer);
+
     const taskId = $('#taskIdInput').val();
     const title = $('#taskTitleInput').val().trim();
     const description = $('#taskDescriptionInput').val().trim();
 
     if (title === '') {
-        loadTasks();
         return;
     }
 

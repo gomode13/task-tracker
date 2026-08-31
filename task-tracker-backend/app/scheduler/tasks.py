@@ -36,6 +36,6 @@ def send_daily_reports() -> None:
                     request_id=request_id, completed_titles=completed_titles, pending_titles=pending_titles
                 )
             )
-
-    producer.flush()
-    consume_daily_report_responses(users_by_request_id)
+    if users_by_request_id:
+        producer.flush(10)
+        consume_daily_report_responses(users_by_request_id)
