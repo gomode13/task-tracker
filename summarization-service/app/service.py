@@ -1,3 +1,4 @@
+import logging
 from uuid import UUID
 
 import httpx
@@ -11,6 +12,7 @@ from app.models import ProcessedRequest
 from app.schemas import DailyReportRequest, DailyReportResponse
 
 llm_client = GigaChatClient()
+logger = logging.getLogger(__name__)
 
 
 async def is_request_processed(session: AsyncSession, request_id: UUID) -> bool:
@@ -32,6 +34,7 @@ async def handle_daily_report_request(request: DailyReportRequest) -> None:
         summary = await llm_client.generate_summary(request.completed_titles, request.pending_titles)
         response = DailyReportResponse(request_id=request.request_id, summary=summary)
     except (httpx.HTTPError, KeyError, IndexError) as e:
+        logger.exception("Failed to generate summary: request_id=%s", request.request_id)
         response = DailyReportResponse(request_id=request.request_id, error=str(e))
     await kafka_producer.send_daily_report_response(response)
     async with session_factory() as session:
