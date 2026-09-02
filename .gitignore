@@ -219,3 +219,4 @@ __marimo__/
 
 # Certificates
 *.cer
+!summarization-service/russian_trusted_root_ca.cer

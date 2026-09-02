@@ -113,9 +113,115 @@ services:
       kafka:
         condition: service_healthy
 
+  backend:
+    build: ./task-tracker-backend/
+    image: task-tracker-backend
+    restart: unless-stopped
+    env_file:
+      - ./task-tracker-backend/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      backend-migrations:
+        condition: service_completed_successfully
+
+  email-sender:
+    build: ./task-tracker-backend/
+    image: task-tracker-backend
+    restart: unless-stopped
+    env_file:
+      - ./task-tracker-backend/.env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    command: celery -A app.celery_app worker --loglevel=info --queues=celery
+
+  report-worker:
+    build: ./task-tracker-backend/
+    image: task-tracker-backend
+    restart: unless-stopped
+    env_file:
+      - ./task-tracker-backend/.env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      backend-migrations:
+        condition: service_completed_successfully
+    command: celery -A app.celery_app worker --loglevel=info --queues=reports
+
+  scheduler:
+    build: ./task-tracker-backend/
+    image: task-tracker-backend
+    restart: unless-stopped
+    env_file:
+      - ./task-tracker-backend/.env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    command: celery -A app.celery_app beat --loglevel=info --schedule /var/lib/celery/celerybeat-schedule
+    volumes:
+      - celerybeat_data:/var/lib/celery
+
+  summarization-service:
+    build: ./summarization-service/
+    image: summarization-service
+    restart: unless-stopped
+    env_file:
+      - ./summarization-service/.env
+    depends_on:
+      kafka:
+        condition: service_healthy
+      summarization-postgres:
+        condition: service_healthy
+      summarization-migrations:
+        condition: service_completed_successfully
+
+  frontend:
+    build: ./task-tracker-frontend/
+    image: task-tracker-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "80:80"
+
+  backend-migrations:
+    build: ./task-tracker-backend/
+    image: task-tracker-backend
+    restart: "no"
+    env_file:
+      - ./task-tracker-backend/.env
+    command: alembic upgrade head
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  summarization-migrations:
+    build: ./summarization-service/
+    image: summarization-service
+    restart: "no"
+    env_file:
+      - ./summarization-service/.env
+    command: alembic upgrade head
+    depends_on:
+      summarization-postgres:
+        condition: service_healthy
+
 volumes:
   pgdata:
   rabbitmq_data:
   redis_data:
   kafka_data:
   summarization_pgdata:
+  celerybeat_data:
