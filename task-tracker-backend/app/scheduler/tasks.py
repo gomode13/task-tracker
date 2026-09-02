@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 from app.celery_app import celery_app
 from app.database import sync_session_factory
 from app.kafka.consumer import consume_daily_report_responses
-from app.kafka.producer import producer, send_daily_report_request
+from app.kafka.producer import get_producer, send_daily_report_request
 from app.scheduler.schemas import DailyReportRecipient, DailyReportRequest
 from app.scheduler.service import get_all_users, get_completed_tasks_for_period, get_pending_tasks
 
@@ -37,5 +37,6 @@ def send_daily_reports() -> None:
                 )
             )
     if users_by_request_id:
+        producer = get_producer()
         producer.flush(10)
         consume_daily_report_responses(users_by_request_id)
