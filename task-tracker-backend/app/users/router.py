@@ -45,7 +45,7 @@ async def read_current_user(user: CurrentUserDep):
     return user
 
 
-@router.post("/session", status_code=status.HTTP_201_CREATED)
+@router.post("/session", status_code=status.HTTP_200_OK)
 async def create_session(data: UserLogin, session: SessionDep, redis_client: RedisDep, response: Response):
     try:
         user = await authenticate_user(session, data.email, data.password)

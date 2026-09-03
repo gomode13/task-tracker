@@ -20,7 +20,7 @@ class GigaChatClient:
         return True
 
     async def _fetch_access_token(self) -> None:
-        async with httpx.AsyncClient(verify=settings.GIGACHAT_CA_CERT_FILE) as client:
+        async with httpx.AsyncClient(verify=settings.GIGACHAT_CA_CERT_FILE, timeout=30.0) as client:
             response = await client.post(
                 url="https://ngw.devices.sberbank.ru:9443/api/v2/oauth",
                 headers={
@@ -42,10 +42,10 @@ class GigaChatClient:
 
     async def generate_summary(self, completed_titles: list[str], pending_titles: list[str]) -> str:
         await self._ensure_access_token()
-        user_message = (
-            f"Выполненные задачи:\n{"\n".join(completed_titles)}\nНевыполненные задачи:\n{"\n".join(pending_titles)}"
-        )
-        async with httpx.AsyncClient(verify=settings.GIGACHAT_CA_CERT_FILE) as client:
+        completed = "\n".join(completed_titles) or "нет"
+        pending = "\n".join(pending_titles) or "нет"
+        user_message = f"Выполненные задачи:\n{completed}\nНевыполненные задачи:\n{pending}"
+        async with httpx.AsyncClient(verify=settings.GIGACHAT_CA_CERT_FILE, timeout=30.0) as client:
             response = await client.post(
                 url="https://api.giga.chat/v1/chat/completions",
                 headers={
@@ -54,7 +54,7 @@ class GigaChatClient:
                     "Authorization": f"Bearer {self.access_token}",
                 },
                 json={
-                    "model": "GigaChat-2",
+                    "model": "GigaChat-3-Ultra",
                     "messages": [
                         {"role": "system", "content": prompts.DAILY_REPORT_SYSTEM_PROMPT},
                         {"role": "user", "content": user_message},

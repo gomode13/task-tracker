@@ -1,8 +1,9 @@
 import logging
+import time
 from uuid import UUID
 
-import time
-from confluent_kafka import Consumer, KafkaException
+from confluent_kafka import Consumer
+from pydantic import ValidationError
 
 from app.config import settings
 from app.email_sender.tasks import send_daily_report_email
@@ -38,16 +39,24 @@ def consume_daily_report_responses(users_by_request_id: dict[UUID, DailyReportRe
                 continue
 
             if msg.error():
-                logger.error("Unexpected error with Kafka Consumer: %s", msg.error())
-                raise KafkaException(msg.error())
+                logger.error("Kafka consumer error: %s", msg.error())
+                continue
 
-            response = DailyReportResponse.model_validate_json(msg.value().decode("utf-8"))
+            try:
+                response = DailyReportResponse.model_validate_json(msg.value().decode("utf-8"))
+            except ValidationError:
+                logger.exception("Failed to parse daily report response: offset=%s", msg.offset())
+                continue
             logger.info("Received daily report response: offset=%s, request_id=%s", msg.offset(), response.request_id)
 
             if response.request_id not in users_by_request_id:
                 continue
 
             recipient = users_by_request_id.pop(response.request_id)
+
+            if response.error:
+                logger.error("Summarization failed: request_id=%s, error=%s", response.request_id, response.error)
+
             send_daily_report_email.delay(
                 recipient.email, recipient.completed_titles, recipient.pending_titles, response.summary
             )
@@ -55,8 +64,7 @@ def consume_daily_report_responses(users_by_request_id: dict[UUID, DailyReportRe
             if not users_by_request_id:
                 break
 
+    finally:
         for recipient in users_by_request_id.values():
             send_daily_report_email.delay(recipient.email, recipient.completed_titles, recipient.pending_titles, None)
-
-    finally:
         consumer.close()
