@@ -1,6 +1,6 @@
 [project]
 name = "task-tracker-backend"
-version = "0.1.0"
+version = "1.0.0"
 description = ""
 authors = [
     {name = "gomode13",email = "lil.god.mode.13@gmail.com"}
