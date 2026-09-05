@@ -175,8 +175,18 @@ services:
     depends_on:
       backend:
         condition: service_started
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+    depends_on:
+      - frontend
 
   backend-migrations:
     image: godmode13/task-tracker-backend:main
@@ -205,3 +215,4 @@ volumes:
   kafka_data:
   summarization_pgdata:
   celerybeat_data:
+  caddy_data:
